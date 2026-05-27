@@ -114,3 +114,39 @@ def breakdown(user=Depends(get_current_user)):
         "income": cf["income"],
         "expenses": cf["expenses"],
     }
+
+@router.get("/projection")
+def projection(user=Depends(get_current_user)):
+    uid = user["user_id"]
+    cf = get_month_cashflow(uid)
+    nw = net_worth(uid)
+    
+    monthly_savings = cf['surplus']
+    current_nw = nw['net_worth']
+    annual_return = 0.07  # S&P 500 average
+    
+    projections = {}
+    for years in [1, 3, 5, 10, 20]:
+        future = current_nw
+        for m in range(years * 12):
+            future = future * (1 + annual_return/12) + monthly_savings
+        projections[str(years)] = round(future, 2)
+    
+    fire_number = cf['expenses'] * 12 * 25
+    years_to_fire = 0
+    if monthly_savings > 0:
+        future = current_nw
+        for m in range(12 * 100):
+            future = future * (1 + annual_return/12) + monthly_savings
+            if future >= fire_number:
+                years_to_fire = round(m/12, 1)
+                break
+    
+    return {
+        "projections": projections,
+        "current_nw": current_nw,
+        "monthly_savings": round(monthly_savings, 2),
+        "fire_number": round(fire_number, 2),
+        "years_to_fire": years_to_fire,
+        "annual_return": annual_return * 100,
+    }
