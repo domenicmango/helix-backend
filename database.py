@@ -245,3 +245,9 @@ def wealth_score(user_id):
 
 def add_snapshot(user_id, net_worth_val, total_assets, total_debts):
     return save_snapshot(user_id, net_worth_val, total_assets, total_debts)
+
+def create_goal(user_id, title, target_amount, target_months):
+    return add_goal(user_id, title, target_amount, target_months)
+
+def list_goals(user_id):
+    return get_goals(user_id)
