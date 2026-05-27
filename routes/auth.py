@@ -16,7 +16,8 @@ class RegisterRequest(BaseModel):
 def register(req: RegisterRequest):
     if get_user_by_email(req.email):
         raise HTTPException(status_code=400, detail="Email already registered")
-    user_id = create_user(req.email, hash_password(req.password), req.first_name, req.base_currency)
+    user = create_user(req.email, hash_password(req.password), req.first_name, req.base_currency)
+    user_id = user["user_id"]
     token = create_token(user_id)
     return {"token": token, "user_id": user_id, "first_name": req.first_name}
 
