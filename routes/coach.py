@@ -133,13 +133,59 @@ def chat(req: ChatRequest, user=Depends(get_current_user)):
         client = anthropic.Anthropic(api_key=api_key)
         messages = [{"role": m.role, "content": m.content} for m in req.history[-12:]]
         messages.append({"role": "user", "content": req.message})
+        system_with_actions = system + """
+
+როცა მომხმარებელი ახსენებს ფინანსურ ოპერაციას, პასუხის ბოლოს დაამატე ეს ფორმატი:
+[ACTION:add_transaction:amount:currency:direction:category]
+
+მაგალითები:
+"150 ევრო მივიღე ხელფასი" → [ACTION:add_transaction:150:EUR:income:ხელფასი]
+"30 ევრო დავხარჯე საკვებზე" → [ACTION:add_transaction:30:EUR:expense:საკვები]
+"ბინა მაქვს 170000 ევრო" → [ACTION:add_asset:170000:EUR:ბინა:false]
+
+თუ ოპერაცია არ არის, ACTION არ დაამატო.
+"""
         response = client.messages.create(
             model="claude-sonnet-4-5",
             max_tokens=400,
             system=system,
             messages=messages
         )
-        return {"reply": response.content[0].text, "xp_earned": 25}
+        reply_text = response.content[0].text
+        actions = []
+        import re
+        action_pattern = r'\[ACTION:([^\]]+)\]'
+        matches = re.findall(action_pattern, reply_text)
+        for match in matches:
+            parts = match.split(':')
+            if parts[0] == 'add_transaction' and len(parts) >= 5:
+                try:
+                    from routes.transactions import convert
+                    amount = float(parts[1])
+                    currency = parts[2]
+                    direction = parts[3]
+                    category = parts[4] if len(parts) > 4 else direction
+                    base = user["base_currency"]
+                    amount_base, rate = convert(amount, currency, base)
+                    from database import add_transaction
+                    add_transaction(uid, amount, currency, amount_base, base, direction, None, category, None, rate)
+                    actions.append({"type": "add_transaction", "amount": amount, "direction": direction, "category": category})
+                except: pass
+            elif parts[0] == 'add_asset' and len(parts) >= 4:
+                try:
+                    from routes.transactions import convert
+                    amount = float(parts[1])
+                    currency = parts[2]
+                    name = parts[3]
+                    is_liquid = parts[4].lower() == 'true' if len(parts) > 4 else False
+                    base = user["base_currency"]
+                    amount_base, rate = convert(amount, currency, base)
+                    from database import upsert_asset
+                    upsert_asset(uid, name, amount, currency, amount_base, int(is_liquid))
+                    actions.append({"type": "add_asset", "name": name, "amount": amount})
+                except: pass
+        clean_reply = re.sub(action_pattern, '', reply_text).strip()
+        return {"reply": clean_reply, "xp_earned": 25, "actions": actions}
     except Exception as e:
         raise HTTPException(status_code=502, detail=str(e))
 
