@@ -70,3 +70,47 @@ def trend(user=Depends(get_current_user)):
     pct    = round(growth / first * 100, 1) if first else 0
     return {"count": len(rows), "nominal_growth": growth,
             "nominal_pct": pct, "data": [dict(r) for r in rows]}
+
+CATEGORY_MAP = {
+    "საკვები": "needs", "food": "needs", "ტრანსპ.": "needs", "transport": "needs",
+    "საცხ.": "needs", "housing": "needs", "ჯანმრთ.": "needs", "health": "needs",
+    "კომუნალური": "needs", "utilities": "needs",
+    "გართ.": "wants", "fun": "wants", "entertainment": "wants",
+    "ტანს.": "wants", "clothing": "wants", "რესტ.": "wants", "restaurant": "wants",
+    "სოც.მედ.": "wants", "social": "wants", "social media": "wants",
+    "განათ.": "wants", "education": "wants",
+    "ინვესტ.": "savings", "investment": "savings",
+    "დანაზოგი": "savings", "savings": "savings",
+    "salary": "income", "ხელფასი": "income",
+    "freelance": "income", "ფრილანსი": "income",
+    "business": "income", "ბიზნესი": "income",
+}
+
+@router.get("/breakdown")
+def breakdown(user=Depends(get_current_user)):
+    uid = user["user_id"]
+    from database import get_transactions, get_month_cashflow
+    txs = get_transactions(uid, limit=200)
+    cf = get_month_cashflow(uid)
+    
+    from datetime import datetime
+    month = datetime.now().strftime('%Y-%m')
+    month_txs = [t for t in txs if t['ts'] and t['ts'].startswith(month) and t['direction'] == 'expense']
+    
+    buckets = {"needs": 0, "wants": 0, "savings": 0, "other": 0}
+    for tx in month_txs:
+        cat = (tx.get('category') or '').lower()
+        bucket = CATEGORY_MAP.get(cat, 'other')
+        buckets[bucket] += tx['amount_base']
+    
+    total = sum(buckets.values()) or 1
+    income = cf['income'] or 1
+    
+    return {
+        "needs": {"amount": round(buckets["needs"], 2), "pct": round(buckets["needs"]/income*100, 1), "target": 50},
+        "wants": {"amount": round(buckets["wants"], 2), "pct": round(buckets["wants"]/income*100, 1), "target": 30},
+        "savings": {"amount": round(buckets["savings"], 2), "pct": round(cf["surplus"]/income*100, 1), "target": 20},
+        "other": {"amount": round(buckets["other"], 2), "pct": round(buckets["other"]/income*100, 1), "target": 0},
+        "income": cf["income"],
+        "expenses": cf["expenses"],
+    }
