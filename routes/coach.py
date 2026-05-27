@@ -6,6 +6,7 @@ from database import month_cashflow, net_worth, emergency_months, wealth_score
 from config import settings
 import anthropic
 import random
+import os
 
 router = APIRouter()
 
@@ -95,14 +96,15 @@ def chat(req: ChatRequest, user=Depends(get_current_user)):
         em, sc
     )
 
-    if not settings.ANTHROPIC_API_KEY:
+    api_key = os.environ.get("ANTHROPIC_API_KEY") or settings.ANTHROPIC_API_KEY
+    if not api_key:
         return {
             "reply": f"გამარჯობა {name}! AI Coach-ის გასააქტიურებლად დაამატე ANTHROPIC_API_KEY .env ფაილში. შენი სიმდიდრის ქულაა {sc}/100 და დაზოგვის ნორმა {cf['savings_rate']:.1f}%.",
             "xp_earned": 10
         }
 
     try:
-        client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+        client = anthropic.Anthropic(api_key=api_key)
         messages = [{"role": m.role, "content": m.content} for m in req.history[-12:]]
         messages.append({"role": "user", "content": req.message})
         response = client.messages.create(
