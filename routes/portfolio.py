@@ -37,9 +37,11 @@ def status(user=Depends(get_current_user)):
 
 @router.post("/assets")
 def add_asset(req: AssetRequest, user=Depends(get_current_user)):
-    upsert_asset(user["user_id"], req.name, req.amount,
-                 is_liquid=int(req.is_liquid), is_crypto=int(req.is_crypto))
-    return {"ok": True, "name": req.name, "amount": req.amount}
+    from routes.transactions import convert
+    base = user["base_currency"]
+    amount_base, rate = convert(req.amount, req.currency.upper(), base)
+    upsert_asset(user["user_id"], req.name, req.amount, req.currency.upper(), amount_base, int(req.is_liquid))
+    return {"ok": True, "name": req.name, "amount": req.amount, "amount_base": amount_base}
 
 @router.post("/debts")
 def add_debt(req: DebtRequest, user=Depends(get_current_user)):
