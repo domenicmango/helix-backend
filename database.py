@@ -194,3 +194,54 @@ def get_snapshots(user_id, limit=30):
         cur = db.cursor()
         cur.execute("SELECT * FROM snapshots WHERE user_id=%s ORDER BY ts DESC LIMIT %s", (user_id, limit))
         return rows_to_dicts(cur.fetchall(), cur)
+
+def upsert_asset(user_id, name, amount, currency, amount_base, is_liquid):
+    return add_asset(user_id, name, amount, currency, amount_base, is_liquid)
+
+def upsert_debt(user_id, name, amount, currency, amount_base, interest_rate=0):
+    with get_db() as db:
+        cur = db.cursor()
+        cur.execute(
+            "INSERT INTO debts (user_id,name,amount,currency,amount_base,interest_rate,created_at) VALUES (%s,%s,%s,%s,%s,%s,%s) RETURNING *",
+            (user_id, name, amount, currency, amount_base, interest_rate, now_iso())
+        )
+        return row_to_dict(cur.fetchone(), cur)
+
+def all_assets(user_id):
+    return get_assets(user_id)
+
+def all_debts(user_id):
+    return get_debts(user_id)
+
+def net_worth(user_id):
+    assets = get_assets(user_id)
+    debts = get_debts(user_id)
+    total_assets = sum(a['amount_base'] for a in assets)
+    total_debts = sum(d['amount_base'] for d in debts)
+    return {'net_worth': total_assets - total_debts, 'total_assets': total_assets, 'total_debts': total_debts, 'assets': assets, 'debts': debts}
+
+def emergency_months(user_id):
+    nw = net_worth(user_id)
+    cf = get_month_cashflow(user_id)
+    liquid = sum(a['amount_base'] for a in nw['assets'] if a['is_liquid'])
+    monthly_exp = cf['expenses'] or 1
+    return liquid / monthly_exp
+
+def wealth_score(user_id):
+    try:
+        cf = get_month_cashflow(user_id)
+        em = emergency_months(user_id)
+        nw = net_worth(user_id)
+        score = 0
+        if cf['savings_rate'] >= 20: score += 30
+        elif cf['savings_rate'] >= 10: score += 15
+        if em >= 6: score += 25
+        elif em >= 3: score += 12
+        if nw['net_worth'] >= 10000: score += 25
+        elif nw['net_worth'] >= 1000: score += 10
+        if nw['total_debts'] == 0: score += 20
+        return min(score, 100)
+    except: return 0
+
+def add_snapshot(user_id, net_worth_val, total_assets, total_debts):
+    return save_snapshot(user_id, net_worth_val, total_assets, total_debts)
