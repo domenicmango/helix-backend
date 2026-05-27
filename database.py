@@ -115,7 +115,7 @@ def create_user(email, password_hash, first_name, base_currency='EUR'):
         )
         return row_to_dict(cur.fetchone(), cur)
 
-def add_transaction(user_id, amount, currency, amount_base, fx_rate, direction, category, note):
+def add_transaction(user_id, amount, currency, amount_base, base_currency, direction, source, category, note, fx_rate=1.0):
     with get_db() as db:
         cur = db.cursor()
         cur.execute(
