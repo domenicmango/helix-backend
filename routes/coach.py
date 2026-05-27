@@ -148,7 +148,7 @@ def chat(req: ChatRequest, user=Depends(get_current_user)):
         response = client.messages.create(
             model="claude-sonnet-4-5",
             max_tokens=400,
-            system=system,
+            system=system_with_actions,
             messages=messages
         )
         reply_text = response.content[0].text
