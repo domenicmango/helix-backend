@@ -144,6 +144,7 @@ def chat(req: ChatRequest, user=Depends(get_current_user)):
 "ბინა მაქვს 170000 ევრო" → [ACTION:add_asset:170000:EUR:ბინა:false]
 
 თუ ოპერაცია არ არის, ACTION არ დაამატო.
+"ყველაფერი გავანულო" ან "თავიდან დავიწყო" → [ACTION:reset]
 """
         response = client.messages.create(
             model="claude-sonnet-4-5",
@@ -170,6 +171,15 @@ def chat(req: ChatRequest, user=Depends(get_current_user)):
                     from database import add_transaction
                     add_transaction(uid, amount, currency, amount_base, base, direction, None, category, None, rate)
                     actions.append({"type": "add_transaction", "amount": amount, "direction": direction, "category": category})
+                except: pass
+            elif parts[0] == 'reset':
+                try:
+                    import requests as req_lib
+                    from auth import create_token
+                    tok = create_token(uid)
+                    req_lib.delete(f"http://localhost:8080/portfolio/reset", 
+                        headers={"Authorization": f"Bearer {tok}"})
+                    actions.append({"type": "reset"})
                 except: pass
             elif parts[0] == 'add_asset' and len(parts) >= 4:
                 try:

@@ -152,3 +152,16 @@ def projection(user=Depends(get_current_user)):
         "years_to_fire": years_to_fire,
         "annual_return": annual_return * 100,
     }
+
+@router.delete("/reset")
+def reset_data(user=Depends(get_current_user)):
+    uid = user["user_id"]
+    with __import__('database').get_db() as db:
+        cur = db.cursor()
+        cur.execute("DELETE FROM transactions WHERE user_id=%s", (uid,))
+        cur.execute("DELETE FROM assets WHERE user_id=%s", (uid,))
+        cur.execute("DELETE FROM debts WHERE user_id=%s", (uid,))
+        cur.execute("DELETE FROM goals WHERE user_id=%s", (uid,))
+        cur.execute("DELETE FROM snapshots WHERE user_id=%s", (uid,))
+        db.commit()
+    return {"ok": True, "message": "ყველა მონაცემი წაიშალა"}
