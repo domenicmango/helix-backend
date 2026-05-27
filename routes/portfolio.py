@@ -4,7 +4,7 @@ from typing import Optional
 from auth import get_current_user
 from database import (upsert_asset, upsert_debt, all_assets, all_debts,
                        net_worth, emergency_months, wealth_score,
-                       month_cashflow, add_snapshot, get_snapshots)
+                       get_month_cashflow, add_snapshot, get_snapshots)
 
 router = APIRouter()
 
@@ -26,7 +26,7 @@ def status(user=Depends(get_current_user)):
     uid  = user["user_id"]
     base = user["base_currency"]
     nw   = net_worth(uid)
-    cf   = month_cashflow(uid)
+    cf   = get_month_cashflow(uid)
     em   = emergency_months(uid)
     sc   = wealth_score(uid)
     return {"net_worth": nw["net_worth"], "total_assets": nw["total_assets"],

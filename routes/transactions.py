@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from typing import Optional
 from auth import get_current_user
-from database import add_transaction, list_transactions, delete_last_transaction, month_cashflow
+from database import add_transaction, get_transactions, delete_transaction, get_month_cashflow
 import requests
 
 router = APIRouter()
@@ -37,20 +37,20 @@ def add_tx(req: TxRequest, user=Depends(get_current_user)):
     amount_base, rate = convert(req.amount, req.currency.upper(), base)
     tx_id = add_transaction(uid, req.amount, req.currency.upper(), amount_base,
                              base, req.direction, req.source, req.category, req.note, rate)
-    cf = month_cashflow(uid)
+    cf = get_month_cashflow(uid)
     return {"id": tx_id, "amount_base": amount_base, "base_currency": base,
             "fx_rate": rate, "cashflow": cf}
 
 @router.get("")
 def get_txs(limit: int = 20, user=Depends(get_current_user)):
-    rows = list_transactions(user["user_id"], limit)
+    rows = get_transactions(user["user_id"], limit)
     return [dict(r) for r in rows]
 
 @router.get("/month")
 def get_month(user=Depends(get_current_user)):
-    return month_cashflow(user["user_id"])
+    return get_month_cashflow(user["user_id"])
 
 @router.delete("/last")
 def undo(user=Depends(get_current_user)):
-    ok = delete_last_transaction(user["user_id"])
+    ok = delete_transaction(user["user_id"])
     return {"deleted": ok}

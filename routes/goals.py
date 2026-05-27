@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from auth import get_current_user
-from database import create_goal, list_goals, month_cashflow
+from database import create_goal, list_goals, get_month_cashflow
 
 router = APIRouter()
 
@@ -14,7 +14,7 @@ class GoalRequest(BaseModel):
 def add_goal(req: GoalRequest, user=Depends(get_current_user)):
     uid = user["user_id"]
     goal_id = create_goal(uid, req.title, req.target_amount, req.target_months)
-    cf = month_cashflow(uid)
+    cf = get_month_cashflow(uid)
     monthly_needed = req.target_amount / req.target_months
     gap = monthly_needed - cf["surplus"]
     return {"id": goal_id, "title": req.title, "target_amount": req.target_amount,

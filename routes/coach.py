@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from typing import List, Optional
 from auth import get_current_user
-from database import month_cashflow, net_worth, emergency_months, wealth_score
+from database import get_month_cashflow, net_worth, emergency_months, wealth_score
 from config import settings
 import anthropic
 import random
@@ -153,7 +153,7 @@ class ChatRequest(BaseModel):
 def chat(req: ChatRequest, user=Depends(get_current_user)):
     uid   = user["user_id"]
     base  = user["base_currency"]
-    cf    = month_cashflow(uid)
+    cf    = get_month_cashflow(uid)
     nw    = net_worth(uid)
     em    = emergency_months(uid)
     sc    = wealth_score(uid)
@@ -190,7 +190,7 @@ def chat(req: ChatRequest, user=Depends(get_current_user)):
 def analyze(body: dict, user=Depends(get_current_user)):
     uid       = user["user_id"]
     base      = user["base_currency"]
-    cf        = month_cashflow(uid)
+    cf        = get_month_cashflow(uid)
     nw        = net_worth(uid)
     em        = emergency_months(uid)
     name      = (user["first_name"] or "").split()[0] if user["first_name"] else ""
