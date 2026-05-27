@@ -21,6 +21,17 @@ app.include_router(portfolio.router,    prefix="/portfolio",    tags=["Portfolio
 app.include_router(coach.router,        prefix="/coach",        tags=["Coach"])
 app.include_router(goals.router,        prefix="/goals",        tags=["Goals"])
 
+
+@app.get("/debug")
+def debug():
+    from config import settings
+    import os
+    return {
+        "has_key": bool(settings.ANTHROPIC_API_KEY),
+        "key_len": len(settings.ANTHROPIC_API_KEY),
+        "env_key": bool(os.environ.get("ANTHROPIC_API_KEY")),
+    }
+
 @app.get("/health")
 def health():
     return {"status": "ok", "service": "HELIX"}
