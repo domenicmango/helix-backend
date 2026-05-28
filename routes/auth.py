@@ -35,7 +35,11 @@ def login(form: OAuth2PasswordRequestForm = Depends()):
 def me(user=Depends(get_current_user)):
     return {"user_id": user["user_id"], "email": user["email"],
             "first_name": user["first_name"], "base_currency": user["base_currency"],
-            "plan": user["plan"]}
+            "birth_year": user.get("birth_year", 0),
+            "goal": user.get("goal", ""),
+            "risk_profile": user.get("risk_profile", "balanced"),
+            "country": user.get("country", ""),
+            "monthly_income": user.get("monthly_income", 0)}
 
 from pydantic import BaseModel as BM
 

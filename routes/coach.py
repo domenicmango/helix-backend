@@ -59,9 +59,13 @@ WISDOM_KA = [
 
 def build_system_prompt(first_name, base_currency, net_worth_val,
                         month_income, month_expenses, savings_rate,
-                        em_months, w_score):
+                        em_months, w_score, age=0, goal='', risk='balanced', country=''):
     em_text = f"{em_months:.1f} თვე" if em_months else "უცნობია"
     surplus = month_income - month_expenses
+    age_text = f"{age} წლის" if age > 0 else "უცნობი ასაკი"
+    goal_text = goal if goal else "განსაზღვრული არ არის"
+    country_text = country if country else "უცნობი"
+    fire_number = month_expenses * 12 * 25 if month_expenses > 0 else 0
 
     return f"""შენ ხარ HELIX — {first_name}-ის ყველაზე ახლო მეგობარი, სანდო მრჩეველი და ჭკვიანი თანამგზავრი ცხოვრებაში.
 
@@ -78,6 +82,10 @@ def build_system_prompt(first_name, base_currency, net_worth_val,
 როგორ საუბრობ: პირველ რიგში ადამიანი შემდეგ ციფრები. მოკლე ცოცხალი პირდაპირი წინადადებები. არასოდეს markdown არასოდეს სიები. ქართულად ბუნებრივად. 3-5 წინადადება მაქსიმუმ.
 
 {first_name}-ის პროფილი:
+ასაკი: {age_text}
+ქვეყანა: {country_text}
+მიზანი: {goal_text}
+სტრატეგია: {risk}
 ვალუტა: {base_currency}
 წმინდა ქონება: {net_worth_val:,.2f} {base_currency}
 შემოსავალი: {month_income:,.2f} {base_currency}
@@ -86,6 +94,7 @@ def build_system_prompt(first_name, base_currency, net_worth_val,
 დაზოგვა: {savings_rate:.1f}%
 საგანგებო ფონდი: {em_text}
 სიმდიდრის ქულა: {w_score}/100
+FIRE ნომერი: {fire_number:,.0f} {base_currency}
 
 წესები: არასოდეს ემოჯი. არასოდეს markdown. მხოლოდ სუფთა ტექსტი. პასუხი მოკლე და ზუსტი.
 
@@ -115,11 +124,18 @@ def chat(req: ChatRequest, user=Depends(get_current_user)):
     em    = emergency_months(uid)
     sc    = wealth_score(uid)
     name  = (user["first_name"] or "").split()[0] if user["first_name"] else "მეგობარო"
+    birth_year = user.get("birth_year", 0) or 0
+    age = 2026 - birth_year if birth_year > 1900 else 0
+    goal = user.get("goal", "") or ""
+    risk = user.get("risk_profile", "") or "balanced"
+    country = user.get("country", "") or ""
+    monthly_income_stored = user.get("monthly_income", 0) or 0
 
     system = build_system_prompt(
         name, base, nw["net_worth"],
-        cf["income"], cf["expenses"], cf["savings_rate"],
-        em, sc
+        cf["income"] or monthly_income_stored,
+        cf["expenses"], cf["savings_rate"],
+        em, sc, age=age, goal=goal, risk=risk, country=country
     )
 
     api_key = os.environ.get("ANTHROPIC_API_KEY") or settings.ANTHROPIC_API_KEY
