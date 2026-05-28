@@ -36,3 +36,17 @@ def me(user=Depends(get_current_user)):
     return {"user_id": user["user_id"], "email": user["email"],
             "first_name": user["first_name"], "base_currency": user["base_currency"],
             "plan": user["plan"]}
+
+from pydantic import BaseModel as BM
+
+class UpdateSettingsRequest(BM):
+    base_currency: str
+
+@router.put("/settings")
+def update_settings(req: UpdateSettingsRequest, user=Depends(get_current_user)):
+    with __import__('database').get_db() as db:
+        cur = db.cursor()
+        cur.execute("UPDATE users SET base_currency=%s WHERE user_id=%s", 
+                   (req.base_currency.upper(), user["user_id"]))
+        db.commit()
+    return {"ok": True, "base_currency": req.base_currency.upper()}
