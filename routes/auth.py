@@ -24,7 +24,7 @@ def register(req: RegisterRequest):
 @router.post("/login")
 def login(form: OAuth2PasswordRequestForm = Depends()):
     user = get_user_by_email(form.username)
-    if not user or not verify_password(form.password, user["hashed_password"]):
+    if not user or not verify_password(form.password, user["password_hash"]):
         raise HTTPException(status_code=401, detail="Wrong email or password")
     token = create_token(user["user_id"])
     return {"access_token": token, "token_type": "bearer",
