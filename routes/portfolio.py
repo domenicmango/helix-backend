@@ -40,10 +40,16 @@ def status(user=Depends(get_current_user)):
     cf   = get_month_cashflow(uid)
     em   = emergency_months(uid)
     sc   = wealth_score(uid)
-    return {"net_worth": nw["net_worth"], "total_assets": nw["total_assets"],
-            "total_debts": nw["total_debts"], "assets": nw["assets"], "debts": nw["debts"],
-            "month_income": cf["income"], "month_expenses": cf["expenses"],
-            "month_surplus": cf["surplus"], "savings_rate": cf["savings_rate"],
+    net = convert_to_currency(nw["net_worth"], "EUR", base)
+    assets = convert_to_currency(nw["total_assets"], "EUR", base)
+    debts = convert_to_currency(nw["total_debts"], "EUR", base)
+    income = convert_to_currency(cf["income"], "EUR", base)
+    expenses = convert_to_currency(cf["expenses"], "EUR", base)
+    surplus = convert_to_currency(cf["surplus"], "EUR", base)
+    return {"net_worth": net, "total_assets": assets,
+            "total_debts": debts, "assets": nw["assets"], "debts": nw["debts"],
+            "month_income": income, "month_expenses": expenses,
+            "month_surplus": surplus, "savings_rate": cf["savings_rate"],
             "emergency_months": em, "wealth_score": sc, "base_currency": base}
 
 @router.post("/assets")
