@@ -72,9 +72,14 @@ def complete_onboarding(req: OnboardingRequest, user=Depends(get_current_user)):
         cur = db.cursor()
         cur.execute("""UPDATE users SET 
             first_name=%s, base_currency=%s,
-            onboarding_done=true
+            birth_year=%s, country=%s, goal=%s,
+            risk_profile=%s, monthly_income=%s,
+            monthly_expenses=%s, onboarding_done=true
             WHERE user_id=%s""",
-            (req.first_name, req.base_currency, uid))
+            (req.first_name, req.base_currency,
+             req.birth_year, req.country, req.goal,
+             req.risk_profile, req.monthly_income,
+             req.monthly_expenses, uid))
         db.commit()
     
     # Add initial asset if savings > 0
