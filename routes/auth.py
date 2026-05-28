@@ -50,3 +50,47 @@ def update_settings(req: UpdateSettingsRequest, user=Depends(get_current_user)):
                    (req.base_currency.upper(), user["user_id"]))
         db.commit()
     return {"ok": True, "base_currency": req.base_currency.upper()}
+
+class OnboardingRequest(BM):
+    first_name: str
+    last_name: str = ""
+    birth_year: int = 0
+    country: str = ""
+    base_currency: str = "EUR"
+    monthly_income: float = 0
+    monthly_expenses: float = 0
+    current_savings: float = 0
+    debt_amount: float = 0
+    debt_interest: float = 0
+    goal: str = ""
+    risk_profile: str = "balanced"
+
+@router.post("/onboarding")
+def complete_onboarding(req: OnboardingRequest, user=Depends(get_current_user)):
+    uid = user["user_id"]
+    with __import__('database').get_db() as db:
+        cur = db.cursor()
+        cur.execute("""UPDATE users SET 
+            first_name=%s, base_currency=%s,
+            onboarding_done=true
+            WHERE user_id=%s""",
+            (req.first_name, req.base_currency, uid))
+        db.commit()
+    
+    # Add initial asset if savings > 0
+    if req.current_savings > 0:
+        from database import upsert_asset
+        upsert_asset(uid, 'დანაზოგი', req.current_savings, req.base_currency, req.current_savings, 1)
+    
+    # Add debt if exists
+    if req.debt_amount > 0:
+        from database import upsert_debt
+        upsert_debt(uid, 'ვალი', req.debt_amount, req.base_currency, req.debt_amount, req.debt_interest)
+    
+    return {"ok": True, "profile": {
+        "first_name": req.first_name,
+        "monthly_income": req.monthly_income,
+        "monthly_expenses": req.monthly_expenses,
+        "debt_amount": req.debt_amount,
+        "goal": req.goal,
+    }}
