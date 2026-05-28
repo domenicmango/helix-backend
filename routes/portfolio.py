@@ -21,6 +21,17 @@ class DebtRequest(BaseModel):
     currency: str = "EUR"
     interest_rate: float = 0
 
+def convert_to_currency(amount, from_cur, to_cur):
+    if from_cur == to_cur or amount == 0:
+        return amount
+    try:
+        import requests
+        r = requests.get(f"https://open.er-api.com/v6/latest/{from_cur}", timeout=3)
+        rates = r.json().get("rates", {})
+        return amount * rates.get(to_cur, 1)
+    except:
+        return amount
+
 @router.get("/status")
 def status(user=Depends(get_current_user)):
     uid  = user["user_id"]
