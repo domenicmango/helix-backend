@@ -21,14 +21,21 @@ class DebtRequest(BaseModel):
     currency: str = "EUR"
     interest_rate: float = 0
 
+_fx_cache = {}
+_fx_cache_time = {}
+
 def convert_to_currency(amount, from_cur, to_cur):
     if from_cur == to_cur or amount == 0:
         return amount
     try:
-        import requests
-        r = requests.get(f"https://open.er-api.com/v6/latest/{from_cur}", timeout=3)
-        rates = r.json().get("rates", {})
-        return amount * rates.get(to_cur, 1)
+        import requests, time
+        cache_key = from_cur
+        now = time.time()
+        if cache_key not in _fx_cache or now - _fx_cache_time.get(cache_key, 0) > 3600:
+            r = requests.get(f"https://open.er-api.com/v6/latest/{from_cur}", timeout=3)
+            _fx_cache[cache_key] = r.json().get("rates", {})
+            _fx_cache_time[cache_key] = now
+        return amount * _fx_cache[cache_key].get(to_cur, 1)
     except:
         return amount
 
